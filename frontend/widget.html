@@ -1,0 +1,651 @@
+<!--
+  ===================================================================
+  JC SELF-SERVE REFUND WIDGET  —  SamCart "Custom HTML / Code" block
+  ===================================================================
+  HOW TO INSTALL:
+    1. Open the SamCart page builder for the 7-day refund policy page.
+    2. Drag in a "Code" (Custom HTML) block where you want the widget.
+    3. Paste this ENTIRE file into it.
+    4. Change REFUND_API_BASE below to your deployed Cloud Run URL.
+
+  The widget is fully self-contained (scoped CSS + JS, no external deps).
+  It NEVER holds any API key — it only ever talks to YOUR backend.
+-->
+
+<div id="jc-refund-root">
+  <!-- Step 1: email -->
+  <div class="jcr-card" data-step="email">
+    <h2 class="jcr-title">Request a refund</h2>
+    <p class="jcr-sub">Enter the email you used at checkout to get started.</p>
+    <form class="jcr-form" id="jcr-email-form" novalidate>
+      <input class="jcr-input" id="jcr-email" type="email" inputmode="email"
+             autocomplete="email" placeholder="you@example.com" required />
+      <button class="jcr-btn" type="submit" id="jcr-email-btn">Continue</button>
+    </form>
+    <p class="jcr-msg" id="jcr-email-msg" role="alert"></p>
+  </div>
+
+  <!-- Step 1.5: retention warning (reduce refunds) -->
+  <div class="jcr-card jcr-hidden" data-step="warn">
+    <div class="jcr-warn-icon">!</div>
+    <h2 class="jcr-title jcr-danger-text">Wait, are you sure?</h2>
+    <p class="jcr-sub">A refund is permanent. The moment it's processed, you'll immediately and forever lose access to everything you unlocked:</p>
+    <ul class="jcr-losslist">
+      <li>
+        <div class="jcr-loss-title">❌ 🚀 The 21-Day Profit Launch System</div>
+        <div class="jcr-loss-desc">Your guided system to launch your faceless affiliate business.</div>
+      </li>
+      <li>
+        <div class="jcr-loss-title">❌ 🤖 Your Proprietary AI Affiliate Agent</div>
+        <div class="jcr-loss-desc">The AI that handles almost all the day-to-day work of running it for you.</div>
+      </li>
+      <li>
+        <div class="jcr-loss-title">❌ 👥 The Private Skool Community</div>
+        <div class="jcr-loss-desc">Your login to the private community and every resource inside it.</div>
+      </li>
+      <li>
+        <div class="jcr-loss-title">❌ 🎥 Weekly LIVE Coaching with Nic</div>
+        <div class="jcr-loss-desc">Live weekly calls where Nic answers your questions directly.</div>
+      </li>
+      <li>
+        <div class="jcr-loss-title">❌ 📞 Calls &amp; community access with Jason Capital</div>
+        <div class="jcr-loss-desc">Ongoing access to the group and calls Jason personally set up.</div>
+      </li>
+      <li>
+        <div class="jcr-loss-title">❌ 🔟 BONUS: Top 10 Starter Offers</div>
+        <div class="jcr-loss-desc">The easiest affiliate offers everyone starts making money with.</div>
+      </li>
+      <li>
+        <div class="jcr-loss-title">❌ 📕 BONUS: "When To Quit Your Job"</div>
+        <div class="jcr-loss-desc">An inside look at how to actually be your own boss.</div>
+      </li>
+      <li>
+        <div class="jcr-loss-title">❌ 🧾 BONUS: Direct Intro to Jason's Accountant</div>
+        <div class="jcr-loss-desc">Earning more shouldn't mean getting bled dry in taxes.</div>
+      </li>
+      <li>
+        <div class="jcr-loss-title">❌ 🤝 BONUS: The 30-Day "We Stay With You" Guarantee</div>
+        <div class="jcr-loss-desc">Jason and Nic keep working with you until you land commissions.</div>
+      </li>
+    </ul>
+    <p class="jcr-sub jcr-warn-foot">Not making progress yet? That's exactly what your coaching and the 30-day guarantee are for. Keep your access and let the team get you to your first win.</p>
+    <label class="jcr-ack">
+      <input type="checkbox" id="jcr-ack-checkbox" class="jcr-ack-cb">
+      <span class="jcr-ack-text">LOSE ACCESS FOREVER: I acknowledge I will LOSE this exclusive access to Jason Capital, Nic, and this exact income-generating skillset forever. I also acknowledge I will NEVER be let back in to the Affiliate Boss community, MISS OUT on free access to new Affiliate Boss AI agents / courses / events in the future, and admit I WASTED my time and energy, after processing this refund.</span>
+    </label>
+    <button class="jcr-btn" id="jcr-keep-btn" type="button">Keep my access</button>
+    <button class="jcr-link jcr-danger-link" id="jcr-proceed-btn" type="button" disabled>No thanks, I still want a refund</button>
+    <p class="jcr-msg" id="jcr-warn-msg" role="alert"></p>
+  </div>
+
+  <!-- Step 1.75: offboarding feedback survey (synced to BigQuery) -->
+  <div class="jcr-card jcr-hidden" data-step="questions">
+    <div class="jcr-wiz-progress"><div class="jcr-wiz-bar" id="jcr-wiz-bar"></div></div>
+
+    <!-- one question at a time -->
+    <div class="jcr-wiz-step" data-wiz="reason">
+      <label class="jcr-qlabel" for="jcr-q1-select">What is the main reason you're requesting a refund today?</label>
+      <select class="jcr-input jcr-select" id="jcr-q1-select">
+        <option value="" disabled selected>Select one…</option>
+        <option value="Money">💸 Money: can't afford the total cost right now</option>
+        <option value="Time">⏳ Time: not enough time / bandwidth to do the work</option>
+        <option value="Fit">🧩 Fit: not the right fit for what I need</option>
+        <option value="Expectations">🎯 Expectations: different from the sales page</option>
+        <option value="Other">✍️ Other</option>
+      </select>
+      <input class="jcr-input jcr-other jcr-hidden" id="jcr-q1-other" maxlength="200" placeholder="Please specify…">
+    </div>
+
+    <div class="jcr-wiz-step jcr-hidden" data-wiz="detail">
+      <label class="jcr-qlabel" id="jcr-q1b-label">Tell us a bit more about that.</label>
+      <textarea class="jcr-input jcr-textarea" id="jcr-q1b" rows="3" maxlength="1500" placeholder="What specifically made it feel that way?"></textarea>
+    </div>
+
+    <div class="jcr-wiz-step jcr-hidden" data-wiz="used">
+      <label class="jcr-qlabel">Which parts of the program did you actually use? <span class="jcr-qhint">(select all that apply)</span></label>
+      <div class="jcr-opts" id="jcr-q2-opts">
+        <label class="jcr-opt"><input type="checkbox" value="21-Day Profit Launch Program"><span>21-Day Profit Launch Program</span></label>
+        <label class="jcr-opt"><input type="checkbox" value="AI Affiliate Agent"><span>AI Affiliate Agent</span></label>
+        <label class="jcr-opt"><input type="checkbox" value="Live Weekly Calls"><span>Live Weekly Calls</span></label>
+        <label class="jcr-opt"><input type="checkbox" value="Private Skool Group"><span>Private Skool Group</span></label>
+        <label class="jcr-opt"><input type="checkbox" value="Other" id="jcr-q2-other-cb"><span>Other</span></label>
+        <label class="jcr-opt"><input type="checkbox" value="I never really got started"><span>I never really got started</span></label>
+      </div>
+      <input class="jcr-input jcr-other jcr-hidden" id="jcr-q2-other" maxlength="200" placeholder="Please specify…">
+    </div>
+
+    <div class="jcr-wiz-step jcr-hidden" data-wiz="match">
+      <label class="jcr-qlabel">How closely did the program match what you thought you bought?</label>
+      <div class="jcr-scale" id="jcr-q3-opts">
+        <button type="button" class="jcr-scale-btn" data-v="1"><span class="jcr-emoji">😡</span><span class="jcr-num">1</span></button>
+        <button type="button" class="jcr-scale-btn" data-v="2"><span class="jcr-emoji">🙁</span><span class="jcr-num">2</span></button>
+        <button type="button" class="jcr-scale-btn" data-v="3"><span class="jcr-emoji">😐</span><span class="jcr-num">3</span></button>
+        <button type="button" class="jcr-scale-btn" data-v="4"><span class="jcr-emoji">🙂</span><span class="jcr-num">4</span></button>
+        <button type="button" class="jcr-scale-btn" data-v="5"><span class="jcr-emoji">😍</span><span class="jcr-num">5</span></button>
+      </div>
+      <div class="jcr-scale-legend"><span>Nothing like I expected</span><span>Exactly what I expected</span></div>
+    </div>
+
+    <div class="jcr-wiz-step jcr-hidden" data-wiz="expected">
+      <label class="jcr-qlabel">In your own words, what did you expect that you didn't get?</label>
+      <textarea class="jcr-input jcr-textarea" id="jcr-q3b" rows="3" maxlength="1500" placeholder="What was missing vs. what you expected?"></textarea>
+    </div>
+
+    <div class="jcr-wiz-step jcr-hidden" data-wiz="change">
+      <label class="jcr-qlabel">If we could change ONE thing to keep you, what would it be? <span class="jcr-qhint">(optional)</span></label>
+      <textarea class="jcr-input jcr-textarea" id="jcr-q4" rows="3" maxlength="1500" placeholder="Optional"></textarea>
+    </div>
+
+    <div class="jcr-wiz-nav" id="jcr-wiz-nav">
+      <button class="jcr-linkbtn" id="jcr-wiz-back" type="button">← Back</button>
+      <button class="jcr-btn jcr-wiz-nextbtn" id="jcr-wiz-next" type="button">Next →</button>
+    </div>
+    <div class="jcr-btnstack jcr-hidden" id="jcr-wiz-actions">
+      <button class="jcr-btn" id="jcr-guidance-btn" type="button">Wait, I need guidance from Jason instead</button>
+      <button class="jcr-btn jcr-btn-ghost" id="jcr-getotp-btn" type="button">Submit &amp; get my refund code</button>
+      <button class="jcr-linkbtn jcr-back-center" id="jcr-wiz-back2" type="button">← Back</button>
+    </div>
+    <p class="jcr-msg" id="jcr-q-msg" role="alert"></p>
+  </div>
+
+  <!-- Step 2: OTP -->
+  <div class="jcr-card jcr-hidden" data-step="otp">
+    <h2 class="jcr-title">Enter your code</h2>
+    <p class="jcr-sub">We sent a 6-digit code to <span id="jcr-email-echo" class="jcr-strong"></span>.</p>
+    <form class="jcr-form" id="jcr-otp-form" novalidate>
+      <input class="jcr-input jcr-otp" id="jcr-otp" type="text" inputmode="numeric"
+             autocomplete="one-time-code" maxlength="6" placeholder="000000" required />
+      <button class="jcr-btn" type="submit" id="jcr-otp-btn">Verify</button>
+    </form>
+    <div class="jcr-links">
+      <button class="jcr-link" id="jcr-resend" type="button">Resend code</button>
+      <span class="jcr-sep">·</span>
+      <button class="jcr-link" id="jcr-change-email" type="button">Change email</button>
+    </div>
+    <p class="jcr-msg" id="jcr-otp-msg" role="alert"></p>
+  </div>
+
+  <!-- Step 3: refund confirmation -->
+  <div class="jcr-card jcr-hidden" data-step="confirm">
+    <h2 class="jcr-title">Select what to refund</h2>
+    <p class="jcr-sub" id="jcr-order-meta"></p>
+    <div class="jcr-items" id="jcr-order"></div>
+    <button class="jcr-btn jcr-btn-danger" id="jcr-refund-btn" type="button">Refund selected</button>
+    <p class="jcr-msg" id="jcr-confirm-msg" role="alert"></p>
+  </div>
+
+  <!-- Step 3b: refund window closed -> community help (not a refund) -->
+  <div class="jcr-card jcr-hidden" data-step="help">
+    <div class="jcr-help-icon">💬</div>
+    <h2 class="jcr-title" id="jcr-help-title">Your refund window has closed</h2>
+    <p class="jcr-sub" id="jcr-help-intro">The 7-day self-serve refund window for this order has passed, so it can't be refunded here. But you're far from stuck.</p>
+    <div class="jcr-guarantee">
+      <div class="jcr-guarantee-h">🤝 You're still covered by the 30-Day "We Stay With You" Guarantee</div>
+      <p>If you're following the material and haven't landed a commission yet, Jason and the team will keep working with you until you do.</p>
+    </div>
+    <p class="jcr-sub jcr-steps-lead">Here's how to get help:</p>
+    <ol class="jcr-steps">
+      <li>Post in the community and tell us exactly where you're stuck.</li>
+      <li>Jason and the team will jump in and help you land your first win.</li>
+    </ol>
+    <a class="jcr-btn" id="jcr-community-btn" href="#" target="_blank" rel="noopener">Post in the community &amp; get help</a>
+  </div>
+
+  <!-- Step 4: result -->
+  <div class="jcr-card jcr-hidden" data-step="done">
+    <div class="jcr-check">&#10003;</div>
+    <h2 class="jcr-title" id="jcr-done-title">Refund issued</h2>
+    <p class="jcr-sub" id="jcr-done-sub"></p>
+  </div>
+</div>
+
+<style>
+  /* All styles scoped under #jc-refund-root so they can't leak into the SamCart page */
+  #jc-refund-root{--jcr-accent:#111827;--jcr-danger:#b91c1c;--jcr-border:#e5e7eb;--jcr-muted:#6b7280;
+    max-width:440px;margin:24px auto;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#111827;}
+  #jc-refund-root *{box-sizing:border-box;}
+  #jc-refund-root .jcr-card{background:#fff;border:1px solid var(--jcr-border);border-radius:14px;
+    padding:28px 24px;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;}
+  #jc-refund-root .jcr-hidden{display:none !important;}
+  #jc-refund-root .jcr-title{font-size:20px;font-weight:700;margin:0 0 6px;}
+  #jc-refund-root .jcr-sub{font-size:16px;color:#141414;margin:0 0 20px;line-height:1.5;}
+  #jc-refund-root .jcr-strong{color:#111827;font-weight:600;}
+  #jc-refund-root .jcr-form{display:flex;flex-direction:column;gap:12px;}
+  #jc-refund-root .jcr-input{width:100%;padding:13px 14px;font-size:16px;border:1px solid var(--jcr-border);
+    border-radius:10px;outline:none;transition:border-color .15s;}
+  #jc-refund-root .jcr-input:focus{border-color:var(--jcr-accent);}
+  #jc-refund-root .jcr-otp{text-align:center;letter-spacing:.5em;font-size:22px;font-weight:600;}
+  #jc-refund-root .jcr-btn{width:100%;padding:13px 14px;font-size:15px;font-weight:600;color:#fff;
+    background:var(--jcr-accent);border:none;border-radius:10px;cursor:pointer;transition:opacity .15s;}
+  #jc-refund-root .jcr-btn:hover{opacity:.9;}
+  #jc-refund-root .jcr-btn:disabled{opacity:.5;cursor:not-allowed;}
+  #jc-refund-root .jcr-btn-danger{background:var(--jcr-danger);}
+  #jc-refund-root .jcr-link{background:none;border:none;color:var(--jcr-muted);font-size:13px;
+    text-decoration:underline;cursor:pointer;margin-top:14px;}
+  #jc-refund-root .jcr-link:disabled{opacity:.4;cursor:not-allowed;text-decoration:none;}
+  #jc-refund-root .jcr-links{margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px;}
+  #jc-refund-root .jcr-links .jcr-link{margin-top:0;}
+  #jc-refund-root .jcr-sep{color:var(--jcr-border);}
+  #jc-refund-root .jcr-danger-text{color:var(--jcr-danger);}
+  #jc-refund-root .jcr-danger-link{color:var(--jcr-danger);}
+  #jc-refund-root .jcr-warn-icon{width:52px;height:52px;border-radius:50%;background:#fee2e2;color:var(--jcr-danger);
+    font-size:30px;font-weight:800;line-height:52px;margin:0 auto 14px;}
+  #jc-refund-root .jcr-losslist{list-style:none;padding:0;margin:0 0 16px;text-align:left;}
+  #jc-refund-root .jcr-losslist li{padding:10px 2px;border-bottom:1px solid var(--jcr-border);}
+  #jc-refund-root .jcr-losslist li:last-child{border-bottom:none;}
+  #jc-refund-root .jcr-loss-title{font-size:14px;font-weight:600;color:#141414;line-height:1.4;}
+  #jc-refund-root .jcr-loss-desc{font-size:12px;font-weight:400;color:#141414;line-height:1.4;margin-top:2px;}
+  #jc-refund-root .jcr-warn-foot{font-size:13px;margin:0 0 16px;}
+  #jc-refund-root .jcr-ack{display:flex;align-items:flex-start;gap:10px;text-align:left;background:#fef2f2;
+    border:1px solid #fecaca;border-radius:10px;padding:14px;margin:0 0 16px;cursor:pointer;}
+  #jc-refund-root .jcr-ack-cb{width:18px;height:18px;flex:0 0 auto;margin-top:1px;accent-color:var(--jcr-danger);cursor:pointer;}
+  #jc-refund-root .jcr-ack-text{font-size:12px;font-weight:600;color:var(--jcr-danger);line-height:1.5;}
+  #jc-refund-root .jcr-help-icon{font-size:42px;line-height:1;margin:0 auto 12px;}
+  #jc-refund-root a.jcr-btn{display:block;text-decoration:none;text-align:center;}
+  #jc-refund-root .jcr-textarea{resize:vertical;min-height:66px;font-family:inherit;line-height:1.4;}
+  #jc-refund-root .jcr-q{text-align:left;margin-bottom:16px;}
+  #jc-refund-root .jcr-qlabel{display:block;font-size:14px;font-weight:600;color:#141414;margin:0 0 7px;}
+  #jc-refund-root .jcr-btnstack{display:flex;flex-direction:column;gap:10px;}
+  #jc-refund-root .jcr-btn-ghost{background:#fff;color:var(--jcr-accent);border:1px solid var(--jcr-border);}
+  #jc-refund-root .jcr-btn-ghost:hover{opacity:1;border-color:var(--jcr-accent);}
+  #jc-refund-root .jcr-refund-eta{font-size:15px;font-weight:700;color:#15803d;background:#f0fdf4;
+    border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;margin:0 0 14px;text-align:center;}
+  #jc-refund-root .jcr-q-intro{font-size:14px;color:#3a3a3a;margin:0 0 22px;}
+  #jc-refund-root .jcr-qhint{font-weight:400;color:var(--jcr-muted);font-size:12px;}
+  #jc-refund-root .jcr-opts{display:flex;flex-direction:column;gap:8px;margin-top:2px;}
+  #jc-refund-root .jcr-opt{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;border:1px solid var(--jcr-border);
+    border-radius:10px;cursor:pointer;font-size:13px;line-height:1.4;transition:border-color .12s;}
+  #jc-refund-root .jcr-opt:hover{border-color:var(--jcr-accent);}
+  #jc-refund-root .jcr-opt input{margin-top:2px;flex:0 0 auto;width:16px;height:16px;accent-color:var(--jcr-accent);cursor:pointer;}
+  #jc-refund-root .jcr-opts-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  #jc-refund-root .jcr-select{cursor:pointer;background:#fff;}
+  #jc-refund-root .jcr-scale{display:flex;gap:8px;}
+  #jc-refund-root .jcr-scale-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 0;
+    background:#fff;border:1px solid var(--jcr-border);border-radius:10px;cursor:pointer;transition:all .12s;}
+  #jc-refund-root .jcr-scale-btn:hover{border-color:var(--jcr-accent);}
+  #jc-refund-root .jcr-emoji{font-size:22px;line-height:1;filter:grayscale(.6);opacity:.65;transition:all .12s;}
+  #jc-refund-root .jcr-num{font-size:11px;font-weight:700;color:var(--jcr-muted);}
+  #jc-refund-root .jcr-scale-btn.sel-red{background:#fef2f2;border-color:#f87171;}
+  #jc-refund-root .jcr-scale-btn.sel-amber{background:#fffbeb;border-color:#fbbf24;}
+  #jc-refund-root .jcr-scale-btn.sel-green{background:#f0fdf4;border-color:#4ade80;}
+  #jc-refund-root .jcr-scale-btn[class*="sel-"] .jcr-emoji{filter:none;opacity:1;transform:scale(1.18);}
+  #jc-refund-root .jcr-scale-btn[class*="sel-"] .jcr-num{color:#141414;}
+  #jc-refund-root .jcr-scale-legend{display:flex;justify-content:space-between;font-size:11px;color:var(--jcr-muted);margin-top:6px;}
+  #jc-refund-root .jcr-wiz-progress{height:6px;background:var(--jcr-border);border-radius:99px;margin:0 0 22px;overflow:hidden;}
+  #jc-refund-root .jcr-wiz-bar{height:100%;width:0;background:var(--jcr-accent);border-radius:99px;transition:width .25s ease;}
+  #jc-refund-root .jcr-wiz-step{text-align:left;}
+  #jc-refund-root .jcr-wiz-step .jcr-qlabel{font-size:18px;font-weight:700;line-height:1.35;margin:0 0 14px;}
+  #jc-refund-root .jcr-wiz-nav{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:22px;}
+  #jc-refund-root #jcr-wiz-back{margin-top:0;margin-right:auto;}
+  #jc-refund-root .jcr-wiz-nextbtn{width:auto;padding:11px 32px;flex:0 0 auto;}
+  #jc-refund-root .jcr-linkbtn{background:none;border:none;color:var(--jcr-muted);font-size:14px;font-weight:600;cursor:pointer;padding:8px 2px;}
+  #jc-refund-root .jcr-linkbtn:hover{color:var(--jcr-accent);}
+  #jc-refund-root .jcr-back-center{width:100%;text-align:center;margin-top:2px;}
+  #jc-refund-root .jcr-other{margin-top:10px;}
+  #jc-refund-root .jcr-guarantee{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;margin:4px 0 20px;text-align:left;}
+  #jc-refund-root .jcr-guarantee-h{font-weight:700;font-size:14px;color:#141414;margin:0 0 6px;line-height:1.35;}
+  #jc-refund-root .jcr-guarantee p{margin:0;font-size:13px;color:#3a3a3a;line-height:1.5;}
+  #jc-refund-root .jcr-steps-lead{margin:0 0 8px;}
+  #jc-refund-root .jcr-steps{text-align:left;margin:0 0 20px;padding-left:20px;font-size:14px;line-height:1.5;color:#141414;}
+  #jc-refund-root .jcr-steps li{margin-bottom:6px;}
+  #jc-refund-root .jcr-msg{font-size:13px;margin:16px 0 0;min-height:18px;line-height:1.4;}
+  #jc-refund-root .jcr-msg.jcr-err{color:var(--jcr-danger);}
+  #jc-refund-root .jcr-msg.jcr-ok{color:#15803d;}
+  #jc-refund-root .jcr-items{text-align:left;margin-bottom:20px;}
+  #jc-refund-root .jcr-item{display:flex;align-items:center;gap:11px;padding:13px 14px;border:1px solid var(--jcr-border);
+    border-radius:10px;margin-bottom:10px;cursor:pointer;transition:border-color .15s;}
+  #jc-refund-root .jcr-item:hover{border-color:var(--jcr-accent);}
+  #jc-refund-root .jcr-item-done{opacity:.6;cursor:default;}
+  #jc-refund-root .jcr-item-done:hover{border-color:var(--jcr-border);}
+  #jc-refund-root .jcr-cb{width:18px;height:18px;flex:0 0 auto;accent-color:var(--jcr-danger);cursor:pointer;}
+  #jc-refund-root .jcr-item-name{flex:1;font-size:14px;font-weight:600;}
+  #jc-refund-root .jcr-item-amt{font-weight:700;font-size:14px;white-space:nowrap;}
+  #jc-refund-root .jcr-badge{display:inline-block;font-size:11px;font-weight:600;color:#15803d;background:#dcfce7;
+    border-radius:6px;padding:1px 7px;margin-left:6px;vertical-align:1px;}
+  #jc-refund-root .jcr-check{width:56px;height:56px;border-radius:50%;background:#15803d;color:#fff;
+    font-size:30px;line-height:56px;margin:0 auto 14px;}
+  #jc-refund-root .jcr-spin{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.4);
+    border-top-color:#fff;border-radius:50%;animation:jcr-rot .7s linear infinite;vertical-align:-2px;}
+  @keyframes jcr-rot{to{transform:rotate(360deg);}}
+</style>
+
+<script>
+(function () {
+  "use strict";
+
+  // ====== CONFIG — deployed backend URL ======
+  var REFUND_API_BASE = "https://jc-refund-486757944947.us-central1.run.app";
+  // Skool community link for the "refund window closed" help screen:
+  var SKOOL_URL = "https://www.skool.com/affiliateboss";
+  // ============================================
+
+  var root = document.getElementById("jc-refund-root");
+  var state = { email: "", token: "", currency: "USD" };
+
+  function step(name) {
+    root.querySelectorAll(".jcr-card").forEach(function (c) {
+      c.classList.toggle("jcr-hidden", c.getAttribute("data-step") !== name);
+    });
+    postHeight();
+  }
+  // Tell the parent page how tall we are so it can size the iframe (no inner scrollbar).
+  function postHeight() {
+    var h = Math.ceil(document.documentElement.scrollHeight);
+    try { window.parent.postMessage({ type: "jcr-height", height: h }, "*"); } catch (e) {}
+  }
+  // Ask the parent page to scroll the widget into view (used on step changes).
+  function postScroll() {
+    try { window.parent.postMessage({ type: "jcr-scroll" }, "*"); } catch (e) {}
+  }
+  function msg(id, text, kind) {
+    var el = document.getElementById(id);
+    el.textContent = text || "";
+    el.className = "jcr-msg" + (kind ? " jcr-" + kind : "");
+  }
+  function busy(btn, on, label) {
+    btn.disabled = on;
+    btn.innerHTML = on ? '<span class="jcr-spin"></span>' : label;
+  }
+  function money(cents, currency) {
+    try {
+      return new Intl.NumberFormat("en-US", { style: "currency", currency: currency || "USD" })
+        .format((cents || 0) / 100);
+    } catch (e) { return "$" + ((cents || 0) / 100).toFixed(2); }
+  }
+  async function api(path, body) {
+    var res = await fetch(REFUND_API_BASE + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    var data = {};
+    try { data = await res.json(); } catch (e) {}
+    if (!res.ok) throw new Error(data.error || "Something went wrong. Please try again.");
+    return data;
+  }
+
+  // --- Step 1: email -> retention warning (no code sent yet) ---
+  document.getElementById("jcr-email-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = document.getElementById("jcr-email").value.trim();
+    if (!email) return;
+    state.email = email;
+    msg("jcr-email-msg", "");
+    msg("jcr-warn-msg", "");
+    step("warn");
+  });
+
+  // --- Step 1.5: retention decision (acknowledgment gates the refund path) ---
+  var ackCheckbox = document.getElementById("jcr-ack-checkbox");
+  ackCheckbox.addEventListener("change", function () {
+    document.getElementById("jcr-proceed-btn").disabled = !ackCheckbox.checked;
+  });
+  document.getElementById("jcr-keep-btn").addEventListener("click", function () {
+    step("email");
+  });
+  document.getElementById("jcr-proceed-btn").addEventListener("click", function () {
+    if (document.getElementById("jcr-proceed-btn").disabled) return;
+    msg("jcr-warn-msg", "");
+    msg("jcr-q-msg", "");
+    step("questions");                    // acknowledged -> offboarding survey (one question at a time)
+    showWiz(0);
+  });
+
+  // --- Step 1.75: offboarding feedback survey (one question at a time) ---
+  var q3Value = 0;
+  var WIZ = ["reason", "detail", "used", "match", "expected", "change"];
+  var wizIdx = 0;
+  function wizSkip(name) { return name === "expected" && q3Value > 3; }   // Q3b only when rated 1-3
+  function visibleSteps() { return WIZ.filter(function (n) { return !wizSkip(n); }); }
+  function showWiz(idx) {
+    wizIdx = idx;
+    var name = WIZ[idx];
+    root.querySelectorAll("[data-wiz]").forEach(function (s) {
+      s.classList.toggle("jcr-hidden", s.getAttribute("data-wiz") !== name);
+    });
+    var isLast = name === "change";
+    document.getElementById("jcr-wiz-nav").classList.toggle("jcr-hidden", isLast);
+    document.getElementById("jcr-wiz-back").classList.toggle("jcr-hidden", idx === 0);
+    document.getElementById("jcr-wiz-actions").classList.toggle("jcr-hidden", !isLast);
+    var vis = visibleSteps();
+    document.getElementById("jcr-wiz-bar").style.width =
+      Math.round(((vis.indexOf(name) + 1) / vis.length) * 100) + "%";
+    msg("jcr-q-msg", "");
+    postHeight();
+    postScroll();
+  }
+  function nextWiz() {
+    if (!validStep(WIZ[wizIdx])) return;
+    var i = wizIdx + 1;
+    while (i < WIZ.length && wizSkip(WIZ[i])) i++;
+    if (i < WIZ.length) showWiz(i);
+  }
+  function backWiz() {
+    var i = wizIdx - 1;
+    while (i >= 0 && wizSkip(WIZ[i])) i--;
+    if (i >= 0) showWiz(i);
+  }
+  document.getElementById("jcr-wiz-next").addEventListener("click", nextWiz);
+  document.getElementById("jcr-wiz-back").addEventListener("click", backWiz);
+  document.getElementById("jcr-wiz-back2").addEventListener("click", backWiz);
+
+  // Q1 dropdown: dynamic detail label + reveal "Other" specify box
+  document.getElementById("jcr-q1-select").addEventListener("change", function () {
+    var v = this.value;
+    document.getElementById("jcr-q1-other").classList.toggle("jcr-hidden", v !== "Other");
+    document.getElementById("jcr-q1b-label").textContent =
+      (v && v !== "Other") ? ("What specifically made " + v + " the problem?")
+      : "Tell us a bit more about that.";
+    postHeight();
+  });
+  // Q2 "Other" specify box
+  document.getElementById("jcr-q2-other-cb").addEventListener("change", function () {
+    document.getElementById("jcr-q2-other").classList.toggle("jcr-hidden", !this.checked);
+    postHeight();
+  });
+  // Q3 emoji scale: color by sentiment (>3 green, 3 amber, <3 red)
+  document.querySelectorAll("#jcr-q3-opts .jcr-scale-btn").forEach(function (b) {
+    b.addEventListener("click", function () {
+      q3Value = Number(b.getAttribute("data-v"));
+      var cls = q3Value <= 2 ? "sel-red" : (q3Value === 3 ? "sel-amber" : "sel-green");
+      document.querySelectorAll("#jcr-q3-opts .jcr-scale-btn").forEach(function (x) {
+        x.classList.remove("sel-red", "sel-amber", "sel-green");
+      });
+      b.classList.add(cls);
+    });
+  });
+
+  function q1Reason() {
+    var v = document.getElementById("jcr-q1-select").value || "";
+    var o = document.getElementById("jcr-q1-other").value.trim();
+    return (v === "Other" && o) ? ("Other: " + o) : v;
+  }
+  function q2Used() {
+    var vals = Array.prototype.slice.call(document.querySelectorAll("#jcr-q2-opts input:checked"))
+      .map(function (c) { return c.value; });
+    var o = document.getElementById("jcr-q2-other").value.trim();
+    if (o) vals = vals.map(function (x) { return x === "Other" ? ("Other: " + o) : x; });
+    return vals.join(", ");
+  }
+  function validStep(name) {
+    if (name === "reason") {
+      var v = document.getElementById("jcr-q1-select").value;
+      if (!v) { msg("jcr-q-msg", "Please pick your main reason.", "err"); return false; }
+      if (v === "Other" && !document.getElementById("jcr-q1-other").value.trim()) {
+        msg("jcr-q-msg", "Please specify your reason.", "err"); return false; }
+    } else if (name === "detail") {
+      if (!document.getElementById("jcr-q1b").value.trim()) { msg("jcr-q-msg", "Please add a bit more detail.", "err"); return false; }
+    } else if (name === "used") {
+      if (!document.querySelectorAll("#jcr-q2-opts input:checked").length) { msg("jcr-q-msg", "Please select at least one.", "err"); return false; }
+      if (document.getElementById("jcr-q2-other-cb").checked && !document.getElementById("jcr-q2-other").value.trim()) {
+        msg("jcr-q-msg", "Please specify the other part.", "err"); return false; }
+    } else if (name === "match") {
+      if (!q3Value) { msg("jcr-q-msg", "Please pick a rating.", "err"); return false; }
+    } else if (name === "expected") {
+      if (!document.getElementById("jcr-q3b").value.trim()) { msg("jcr-q-msg", "Please tell us what you expected.", "err"); return false; }
+    }
+    return true;
+  }
+  function collectSurvey() {
+    return {
+      q1_reason: q1Reason(),
+      q1_detail: document.getElementById("jcr-q1b").value.trim(),
+      q2_used: q2Used(),
+      q3_match: q3Value,
+      q3_expected: document.getElementById("jcr-q3b").value.trim(),
+      q4_change: document.getElementById("jcr-q4").value.trim(),
+    };
+  }
+  document.getElementById("jcr-getotp-btn").addEventListener("click", async function () {
+    var a = collectSurvey();
+    var btn = this, orig = btn.textContent;
+    btn.disabled = true; btn.textContent = "Sending code…"; msg("jcr-q-msg", "");
+    try {
+      await api("/offboard", Object.assign({ email: state.email, action: "get_otp" }, a));
+      document.getElementById("jcr-email-echo").textContent = state.email;
+      step("otp");
+    } catch (err) { msg("jcr-q-msg", err.message, "err"); }
+    finally { btn.disabled = false; btn.textContent = orig; }
+  });
+  document.getElementById("jcr-guidance-btn").addEventListener("click", async function () {
+    var a = collectSurvey();
+    var btn = this, orig = btn.textContent;
+    btn.disabled = true; btn.textContent = "One sec…"; msg("jcr-q-msg", "");
+    try {
+      await api("/offboard", Object.assign({ email: state.email, action: "need_guidance" }, a));
+      showHelp("guidance");
+    } catch (err) { msg("jcr-q-msg", err.message, "err"); }
+    finally { btn.disabled = false; btn.textContent = orig; }
+  });
+
+  // Community / help screen — used both for an expired window and the "need guidance" save.
+  function showHelp(mode) {
+    var t = document.getElementById("jcr-help-title");
+    var p = document.getElementById("jcr-help-intro");
+    if (mode === "guidance") {
+      t.textContent = "Smart move.";
+      p.textContent = "Getting unstuck beats starting over. Here's the fastest way to get Jason and the team on your situation.";
+    } else {
+      t.textContent = "Your refund window has closed";
+      p.textContent = "The 7-day self-serve refund window for this order has passed, so it can't be refunded here. But you're far from stuck.";
+    }
+    step("help");
+  }
+
+  // --- Step 2: verify OTP ---
+  document.getElementById("jcr-otp-form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var code = document.getElementById("jcr-otp").value.trim();
+    if (code.length < 6) return;
+    var btn = document.getElementById("jcr-otp-btn");
+    busy(btn, true, "Verify");
+    msg("jcr-otp-msg", "");
+    try {
+      var data = await api("/verify-otp", { email: state.email, code: code });
+      state.token = data.token;
+      state.currency = data.currency || "USD";
+      if (data.order && !data.order.within_window) {
+        showHelp("expired");     // window closed -> community support, not a refund
+      } else {
+        renderItems(data);
+        step("confirm");
+      }
+    } catch (err) {
+      msg("jcr-otp-msg", err.message, "err");
+    } finally {
+      busy(btn, false, "Verify");
+    }
+  });
+
+  document.getElementById("jcr-resend").addEventListener("click", async function () {
+    msg("jcr-otp-msg", "Sending a new code…", "");
+    try { await api("/send-otp", { email: state.email }); msg("jcr-otp-msg", "New code sent.", "ok"); }
+    catch (err) { msg("jcr-otp-msg", err.message, "err"); }
+  });
+
+  document.getElementById("jcr-change-email").addEventListener("click", function () {
+    document.getElementById("jcr-otp").value = "";
+    msg("jcr-otp-msg", "");
+    msg("jcr-email-msg", "");
+    step("email");
+    document.getElementById("jcr-email").focus();
+  });
+
+  function renderItems(data) {
+    var items = data.items || [];
+    var order = data.order || {};
+    var within = !!order.within_window;
+    document.getElementById("jcr-order-meta").textContent =
+      "Order #" + order.order_id + " · Purchased " + order.order_date;
+    var box = document.getElementById("jcr-order");
+    box.innerHTML = items.map(function (it) {
+      var done = it.refunded;
+      var dis = done || !within;
+      return '<label class="jcr-item' + (dis ? ' jcr-item-done' : '') + '">' +
+        '<input type="checkbox" class="jcr-cb" value="' + it.charge_id + '" data-amt="' + it.amount_cents + '" ' +
+          (dis ? 'disabled' : 'checked') + '>' +
+        '<span class="jcr-item-name">' + esc(it.product_name) +
+          (done ? ' <span class="jcr-badge">Refunded</span>' : '') + '</span>' +
+        '<span class="jcr-item-amt">' + money(it.amount_cents, state.currency) + '</span>' +
+        '</label>';
+    }).join("");
+    box.querySelectorAll(".jcr-cb").forEach(function (cb) {
+      cb.addEventListener("change", updateRefundBtn);
+    });
+    var btn = document.getElementById("jcr-refund-btn");
+    if (!within) {
+      btn.disabled = true;
+      msg("jcr-confirm-msg", order.reason || "This order is outside the refund window.", "err");
+      return;
+    }
+    if (!items.some(function (it) { return !it.refunded; })) {
+      btn.disabled = true;
+      msg("jcr-confirm-msg", "This order has already been fully refunded.", "err");
+      return;
+    }
+    msg("jcr-confirm-msg", "");
+    updateRefundBtn();
+  }
+  function selectedCharges() {
+    return Array.prototype.slice.call(document.querySelectorAll("#jcr-order .jcr-cb:checked"));
+  }
+  function updateRefundBtn() {
+    var sel = selectedCharges();
+    var total = sel.reduce(function (s, cb) { return s + Number(cb.getAttribute("data-amt") || 0); }, 0);
+    var btn = document.getElementById("jcr-refund-btn");
+    btn.disabled = sel.length === 0;
+    btn.textContent = sel.length
+      ? "Refund selected (" + money(total, state.currency) + ")"
+      : "Select an item to refund";
+  }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+  // --- Step 3: refund selected charges ---
+  document.getElementById("jcr-refund-btn").addEventListener("click", async function () {
+    var ids = selectedCharges().map(function (cb) { return Number(cb.value); });
+    if (!ids.length) return;
+    var btn = this;
+    busy(btn, true, "Refund selected");
+    msg("jcr-confirm-msg", "");
+    try {
+      var data = await api("/refund", { token: state.token, charge_ids: ids });
+      document.getElementById("jcr-done-sub").textContent =
+        "Your refund of " + money(data.total_cents, data.currency || state.currency) +
+        " is being processed and will appear on your statement within 5-10 business days.";
+      step("done");
+    } catch (err) {
+      busy(btn, false, "Refund selected");
+      msg("jcr-confirm-msg", err.message, "err");
+      updateRefundBtn();
+    }
+  });
+
+  document.getElementById("jcr-community-btn").setAttribute("href", SKOOL_URL);
+
+  // Keep the parent iframe sized to our content (covers step changes + dynamic text).
+  if (window.ResizeObserver) { try { new ResizeObserver(postHeight).observe(root); } catch (e) {} }
+  window.addEventListener("load", postHeight);
+  postHeight();
+})();
+</script>

@@ -1,0 +1,13 @@
+# dependencies
+node_modules/
+
+# secrets / local env (never commit)
+.env
+*.env
+!*.env.example
+
+# logs / os junk
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
